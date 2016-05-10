@@ -1,13 +1,3 @@
-    
-setwd("C:/Users/Eric/Desktop/recomendacion-modelos/")
-ejemplo <- read.csv("data/roc2.csv")
-
-#ORDENAMOS EL DATAFRAME
-ejemplo <- ejemplo[order(ejemplo$SCORE, decreasing = TRUE),]
-
-
-
-
 generate_ROC <- function(scores, real, target){ 
   # Genera una curva de ROC.
   #
@@ -21,55 +11,57 @@ generate_ROC <- function(scores, real, target){
   
   
   #En caso que hayan 2 clases nada mas.
-  if (target <= 2){
-    graficador(scores, real)
+  if (length(unique(real)) <= 2){
+    df <- data.frame(scores,real)
+    df <- df[order(df$scores, decreasing = TRUE),]
+    graficador(df$scores, df$real, target)
+    
   }else{
     #En caso que hayan mas de 2 clases.
-    target <- 5
-   combinatoria <- factorial(target)/(factorial(2)*factorial(target-2))
-   clases <- unique(ejemplo$CLASS)
    
-   df <- data.frame(scores,real)
+   clases <- unique(real)
+   clases <- clases[!clases %in% target]
+   
   #-------------1 vs all---------------------
-   cont <- 0
-   inicio <- 1
-   while (cont != combinatoria) {
-     for (i in inicio:length(clases)) {
-       
-       class1 <- ejemplo$CLASS[ejemplo$CLASS == clases[inicio]]
-       
-     }
-    inicio <- inicio + 1
-    
-    cont <- cont + 1
-   }#endwhile
+    for (i in 1:length(clases)) {
+       #Se toma el valor positivo como uno solo, y los demas como negativos.
+       df <- data.frame(scores,real)
+       class1 <- df[df$real == target,]
+       class2 <- df[df$real == clases[i],]
+       df <- merge(x = class1, y = class2, all = TRUE)
+       df <- df[order(df$scores, decreasing = TRUE),]
+       graficador(df$scores, df$real, target)
+    }
+   
+   
    
   }#endif
   
 }#endfunction
 
 
-graficador <- function(scores, real){
-  div <- 1/(length(scores)/2)
+graficador <- function(scores, real, target){
+  divy <- 1/length(which(real==target))
+  divx <- 1/(length(real)-length(which(real==target)))
   contx <- 0
   conty <- 0
   plot(x=NULL,y=NULL,xlim=c(0, 1), ylim=c(0, 1), xlab="False positive rate", ylab="True positive rate")
   lines(x = c(0,1), y = c(0,1), col = "blue")
   for (i in 1:length(scores)) {
-    if (real[i] == "p"){
+    if (real[i] == target){
       
       points(contx, conty, col = "red")
       
-      lines(x = c(contx, contx), y = c(conty, conty + div) , col = "green")
+      lines(x = c(contx, contx), y = c(conty, conty + divy) , col = "green")
       
-      conty <- conty + div
+      conty <- conty + divy
       
     }else{
       points(contx, conty, col = "red")
       
-      lines(x = c(contx, contx + div) , y = c(conty,conty), col = "green")
+      lines(x = c(contx, contx + divx) , y = c(conty,conty), col = "green")
       
-      contx <- contx + div
+      contx <- contx + divx
     }
     
     
@@ -79,11 +71,10 @@ graficador <- function(scores, real){
   lines(x = c(contx, 1), y = c(conty, 1) , col = "green")
 }#endgraficador
 
-generate_ROC(ejemplo$SCORE, ejemplo$CLASS, length(unique(ejemplo$CLASS)))
-scores<-1:10
-real<-1:10
-df<-data.frame(scores,real)
-class1 <- ejemplo$CLASS[ejemplo$CLASS == clases[inicio]]
-f1<-ejemplo[scores == 3,]
-merge(f,f1, by = c("scores","real"))
-merge(x = f, y = f1, all = TRUE)
+
+
+setwd("C:/Users/Eric/Desktop/recomendacion-modelos/")
+ejemplo <- read.csv("data/roc1.csv")
+
+generate_ROC(ejemplo$SCORE, ejemplo$CLASS, "p")
+
