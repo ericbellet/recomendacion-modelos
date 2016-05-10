@@ -11,14 +11,14 @@ install = function(pkg)
 install('arules')
 install('arulesViz')
 install('FactoMineR')
-install('pROC')
+
 
 
 #Cargo las librerias.
 library(arules)
 library(arulesViz)
 library(FactoMineR)
-library(pROC)
+
 
 ##-------------------------------LECTURA Y ANALISIS-----------------------------------
 
@@ -92,7 +92,6 @@ genArticles <- function(articles){
 }
 #--------------END FUNCTION genArticles-----------------
 
-
 #Cambio el nombre de la columna para que tenga coherencia con el ejemplo dado.
 colnames(periodico)[5] <- "items"
 #Creo la columna de los articulos
@@ -101,13 +100,20 @@ periodico$articles <- periodico$items
 #Se sabe que el portal ofrece 9 tipos de contenidos 
 #y nos ofrecen solo información de 9 artículos.
 
-
 #Obtengo el numero de los articulos.
 periodico$articles <- strsplit(gsub("[{}item]","",periodico$articles), ",")
 
+#Modifico el dataset con las condiciones dadas.
 periodico$articles <- lapply(periodico$articles, genArticles)
 
+#Convierto los espacios en ,
 periodico$articles <- gsub(" ",",",periodico$articles)
 
+#Elimino la primer valor del string.
 periodico$articles <- substring(periodico$articles, 2)
+
+#Calculo el tiempo totan el segundos que dura el usuario en la pagina.
+periodico$tiempototal <- difftime(periodico$exit, periodico$entry, units =  "secs")
+
+#Generar la matriz de transacciones.
 
