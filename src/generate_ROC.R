@@ -47,23 +47,64 @@ graficador <- function(scores, real, target){
   conty <- 0
   plot(x=NULL,y=NULL,xlim=c(0, 1), ylim=c(0, 1), xlab="False positive rate", ylab="True positive rate")
   lines(x = c(0,1), y = c(0,1), col = "blue")
-  for (i in 1:length(scores)) {
+  
+  i <- 1
+  while (i != (length(scores)+1)){
+  
+    #Existen varios elementos con el mismo score??
+    samescore <- length(which(scores==scores[i]))
+    if (samescore > 1){
+      contador <- 0
+      contxORIGEN <- contx
+      contyORIGEN <- conty
+     
+      while (contador != samescore ) {
+        #Si es target
+        if (real[i] == target){
+          
+          points(contx, conty, col = "red")
+          
+          conty <- conty + divy
+          
+          
+        }else{
+          #Si es negativo
+          points(contx, conty, col = "red")
+          
+          contx <- contx + divx
+        }
+        #capaz hay que restar
+        i <- i + 1
+        contador <- contador + 1
+        
+      }#endwhile
+     
+      lines(x = c(contxORIGEN, contx) , y = c(contyORIGEN,conty), col = "green")
+    }else{
+    
+    
+    
+    #Si es target
     if (real[i] == target){
-      
+     
       points(contx, conty, col = "red")
       
       lines(x = c(contx, contx), y = c(conty, conty + divy) , col = "green")
       
       conty <- conty + divy
+      i <- i + 1
       
     }else{
+    #Si es negativo
       points(contx, conty, col = "red")
       
       lines(x = c(contx, contx + divx) , y = c(conty,conty), col = "green")
       
       contx <- contx + divx
+      i <- i + 1
     }
     
+    }
     
   }#endfor
   #Grafico el ultimo punto.
@@ -74,7 +115,7 @@ graficador <- function(scores, real, target){
 
 
 setwd("C:/Users/Eric/Desktop/recomendacion-modelos/")
-ejemplo <- read.csv("data/roc1.csv")
+ejemplo <- read.csv("data/roc3.csv")
 
 generate_ROC(ejemplo$SCORE, ejemplo$CLASS, "p")
 
