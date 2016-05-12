@@ -91,6 +91,15 @@ genArticles <- function(articles){
   
 }
 #--------------END FUNCTION genArticles-----------------
+#------------------FUNCTION llenar-----------------
+llenar <- function(periodico,fila){
+  
+  items <- as.numeric(unlist(strsplit(gsub("[{}item]","",unlist(periodico)), ",")))
+  fila[items]=1
+  return(fila)
+}
+
+#--------------END FUNCTION llenar-----------------
 
 #Cambio el nombre de la columna para que tenga coherencia con el ejemplo dado.
 colnames(periodico)[5] <- "items"
@@ -116,4 +125,23 @@ periodico$articles <- substring(periodico$articles, 2)
 periodico$tiempototal <- difftime(periodico$exit, periodico$entry, units =  "secs")
 
 #Generar la matriz de transacciones.
+fila <- matrix(data = 0, nrow = 1, ncol = 81)
+matriz <- lapply(periodico$items, llenar,fila)
+matriz <- matrix(unlist(matriz), byrow=T, ncol=81)
+
+colnames(matriz) <-  c(gsub(" ","",paste("deportes/articulo",1:9)),gsub(" ","",paste("politica/articulo",1:9)),
+                       gsub(" ","",paste("variedades/articulo",1:9)), gsub(" ","",paste("internacional/articulo",1:9)),
+                       gsub(" ","",paste("nacionales/articulo",1:9)), gsub(" ","",paste("sucesos/articulo",1:9)),
+                       gsub(" ","",paste("comunidad/articulo",1:9)), gsub(" ","",paste("negocios/articulo",1:9)),
+                       gsub(" ","",paste("opinion/articulo",1:9)))
+                       
+
+periodico$numItems <- rowSums(matriz)
+numerobots <- periodico[periodico$numItems >= periodico$tiempototal/20,]
+nrow(numerobots)   
+matriz <- as(matriz, "transactions")
+              
+summary(matriz)                     
+rules <- apriori(matriz,parameter = list(support = 0.005, confidence = 0.1))
+summary(rules)    
 
