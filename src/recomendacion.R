@@ -1,3 +1,7 @@
+###############CAMBIAR##########################
+setwd("C:/Users/Eric/Desktop/recomendacion-modelos/")
+################################################
+
 install = function(pkg)
 {
   # Si ya está instalado, no lo instala.
@@ -10,44 +14,26 @@ install = function(pkg)
 #Instalo automaticamente los paquetes.
 install('arules')
 install('arulesViz')
-install('FactoMineR')
-
-
 
 #Cargo las librerias.
 library(arules)
 library(arulesViz)
-library(FactoMineR)
 
+##-------------------------------LECTURA -----------------------------------
 
-##-------------------------------LECTURA Y ANALISIS-----------------------------------
-
-setwd("C:/Users/Eric/Desktop/recomendacion-modelos/")
 ejemplo <- read.csv("data/ejemplo.csv")
 periodico <- read.csv("data/periodico.csv")
 
-##------------------------------------------------------------------------------------
-##----------------------------GENERACION DE ARTICULOS---------------------------------
-'''
-1. Modifcar su dataset de tal manera que no se lean los identificadores de los artículos
-como itemN sino por su tipo de contenido contenido/articuloN. 
-Ejemplo: {item1, item10, item81} 
-es la transacción {deportes/articulo1, politica
-/articulo1, opinion/articulo9}.
-'''
-#deportes 1-9
-#politica 10-18
-#variedades 19-27
-#internacional 28-36
-#nacionales 37-45
-#sucesos 46-54
-#comunidad 55-63
-#negocios 64-72
-#opinion 73-81
-{item1, item8, item56, item61}
-{item1,item28,item56,item61}
+#CREA LA COLUMNA ARTICLES
 #------------------FUNCTION genArticles-----------------
 genArticles <- function(articles){
+  # Genera la columna articles utilizando la columna items.
+  #
+  # Args:
+  #   articles: Son arreglos númericos que representan los items (EJ: {item1,item9,item63} -> 1,9,63)
+  #
+  # Returns:
+  #   Retorna la columna articles.
   articulo <- ""
   for (i in 1:length(articles)) {
     
@@ -92,22 +78,96 @@ genArticles <- function(articles){
   
 }
 #--------------END FUNCTION genArticles-----------------
+
+#LLENA LA MATRIZ DE TRANSACCIONES
 #------------------FUNCTION llenar-----------------
 llenar <- function(periodico,fila){
+  # Llena la matriz de transacciones con 1 en caso de que el usuario observo los articulos.
+  #
+  # Args:
+  #   periodico: Recibe los items.
+  #   fila: recibe una fila vacia.
+  #
+  # Returns:
+  #   Retorna la matriz de transacciones llena.
   items <- as.numeric(unlist(strsplit(gsub("[{}item]","",unlist(periodico)), ",")))
   fila[items]=1
   return(fila)
 }
-#Generar la matriz de transacciones.
-#fila es un row inicializado en 0.
-fila <- matrix(data = 0, nrow = 1, ncol = 81)
 
-#Lleno la matriz con 1 donde un usuario observo un articulo
-matriz <- lapply(periodico$items, llenar,fila)
-
-#Transformo matriz en una matrix.
-matriz <- matrix(unlist(matriz), byrow=T, ncol=81)
 #--------------END FUNCTION llenar-----------------
+#------------------FUNCTION recomendar-----------------
+recomendar <- function(n, matriz){
+  #plot(rules,method="graph",interactive=TRUE,shading=NA)
+  #plot(rules, measure=c("support","lift"), shading="confidence");
+  #plot(rules, shading="order", control=list(main ="Two-key plot"));
+ 
+
+  rules <- apriori(matriz,parameter = list(support = 0.1, confidence = 0.0))
+  
+  reglas <- subset(rules, subset = lhs %ain% n )
+
+  len <- length(reglas)
+  div <- 0.1
+  cont <- 0
+  #En el caso que no se generaron reglas con ese soporte, voy disminuyendo el soporte
+  while (len == 0){
+    div <- div /10
+    rules <- apriori(matriz,parameter = list(support = div, confidence = 0.0))
+    reglas <- subset(rules, subset = lhs %ain% n )
+    len <- length(reglas)
+    cont <- cont + 1
+    #Un criterio de parada ya que puede ser infinito
+    if (cont == 7){
+      break()
+    }
+  }
+  if (length(reglas)==0){
+    trendigtop<-inspect(rules@rhs)
+    
+    return(row.names(sort(table(trendigtop),decreasing=TRUE))[1])
+  }else{
+ 
+  confianzaAlta <-sort(reglas, decreasing = TRUE, 
+                       na.last = NA,by = "confidence",
+                       order = FALSE)
+
+  #Obtengo la confianza maxima para luego tomar todos los articulos que posean esa confianza
+  maxConfianza <- max(quality((confianzaAlta))[2])
+  #Posiciones que poseen la misma confianza.
+  confianzaAlta<- subset(confianzaAlta, subset = confidence == maxConfianza)
+  
+  
+  #Ahora ordeno por soporte las que tienen la confianza mas alta
+  soportealto <- (sort(confianzaAlta, decreasing = TRUE, 
+                                 na.last = NA,by = "support",
+                                 order = FALSE)[1])
+  articulorecomendar <- inspect(soportealto@rhs[1])
+  return(articulorecomendar)
+  }
+}
+
+#------------------END FUNCTION recomendar-----------------
+
+
+##---------------------------PARTE 1--------------------------------
+##----------------------------GENERACION DE ARTICULOS---------------------------------
+
+#1. Modifcar su dataset de tal manera que no se lean los identificadores de los artículos
+#como itemN sino por su tipo de contenido contenido/articuloN. 
+#Ejemplo: {item1, item10, item81} 
+#es la transacción {deportes/articulo1, politica
+#/articulo1, opinion/articulo9}.
+
+#deportes 1-9
+#politica 10-18
+#variedades 19-27
+#internacional 28-36
+#nacionales 37-45
+#sucesos 46-54
+#comunidad 55-63
+#negocios 64-72
+#opinion 73-81
 
 #Cambio el nombre de la columna para que tenga coherencia con el ejemplo dado.
 colnames(periodico)[5] <- "items"
@@ -132,6 +192,11 @@ periodico$articles <- substring(periodico$articles, 2)
 #Calculo el tiempo totan el segundos que dura el usuario en la pagina.
 periodico$tiempototal <- difftime(periodico$exit, periodico$entry, units =  "secs")
 
+
+##-------------------------------FIN PARTE 1--------------------------------
+
+#GENERACION DE MATRIZ DE TRANSACCIONES Y DETECTAR USUARIOS ROBOTS
+
 #Generar la matriz de transacciones.
 #fila es un row inicializado en 0.
 fila <- matrix(data = 0, nrow = 1, ncol = 81)
@@ -148,56 +213,75 @@ colnames(matriz) <-  c(gsub(" ","",paste("deportes/articulo",1:9)),gsub(" ","",p
                        gsub(" ","",paste("nacionales/articulo",1:9)), gsub(" ","",paste("sucesos/articulo",1:9)),
                        gsub(" ","",paste("comunidad/articulo",1:9)), gsub(" ","",paste("negocios/articulo",1:9)),
                        gsub(" ","",paste("opinion/articulo",1:9)))
-                       
+
+#-------------------------------TRANSACCIONES BOTS---------------------------------------                     
 #El número de posibles transacciones bot que tienen en su dataset 
 #(ellos aceptan que si una persona ve un artículo más de 20 segundos entonces no es un bot). 
 periodico$numItems <- rowSums(matriz)
 numerobots <- periodico[periodico$numItems >= periodico$tiempototal/20,]
 print(paste("El numero de transacciones bot es:",nrow(numerobots)))  
 
+
+periodicoSinBots <- periodico[-numerobots$X,]
+#Utilizamos la matriz de transacciones sin las transacciones bots.
 matriz <- matriz[-numerobots$X,]
 #Matriz de transacciones
 matriz <- as(matriz, "transactions")
 
-summary(matriz)   
 
 
+
+
+##-------------------------------PARTE 3------------------------------------
+
+
+#3. Dado un usuario nuevo que haya ingresado a n artículos (n variable), 
+#poder recomendar un artículo n+1 y así aumentar el compromiso del cliente 
+#con su portal web. Como usted sabe, para poder calcular las reglas necesita 
+#como entrada MinSupport y MinConfianza. Sin embargo, el cliente desconoce cuáles 
+#son estos valores en consecuencia es tarea de usted determinar y justi???car los 
+#mismos de acuerdo a su criterio
+
+print("Introduzca los n articulos:")
+#n <- c("deportes/articulo1","internacional/articulo1", "comunidad/articulo1")
+n <- c("deportes/articulo6","deportes/articulo9")
+articuloARecomendar <- recomendar(n, matriz)
+
+
+##-------------------------------FIN PARTE 3--------------------------------
+
+
+##-------------------------------PARTE 4------------------------------------
 #4. Conocer las 10 visitas con mayor tiempo de estadía en la página y 
 #las 10 visitas con menor tiempo de estadía en la página.
-timemayor10 <- periodico[order(periodico$tiempototal,decreasing = T),][1:10,c(1,7)]
+timemayor10 <- periodicoSinBots[order(periodicoSinBots$tiempototal,decreasing = T),][1:10,c(1,7)]
 print("10 visitas con mayor tiempo de estadía en la página:")
 print(timemayor10)
 
-timemenor10 <-  periodico[order(periodico$tiempototal,decreasing = F),][1:10,c(1,7)]
+timemenor10 <-  periodicoSinBots[order(periodicoSinBots$tiempototal,decreasing = F),][1:10,c(1,7)]
 print("10 visitas con menor tiempo de estadía en la página:")
 print(timemenor10)
 
-#5. Conocer las 10 transacciones con mayor número de apariciones en el dataset
+##-------------------------------FIN PARTE 4--------------------------------
+
+
+##-------------------------------PARTE 5------------------------------------
+
 top10 <- sort(itemFrequency(matriz, type = "absolute"),decreasing = T)[1:10]
-print("Las 10 transacciones con mayor numero de apariciones son:")
+print("Los 10 articulos con mayor numero de apariciones son:")
 print(top10)
 
-itemFrequencyPlot(matriz,topN=10,type="absolute")
+itemFrequencyPlot(matriz,topN=10,type="absolute", main ="Los 10 articulos con mayor numero de apariciones.")
+
+#5. Conocer las 10 transacciones con mayor número de apariciones en el dataset
+
+MatrizSinBots = split(periodicoSinBots$articles,periodicoSinBots$X)
+MatrizSinBots = as(MatrizSinBots,"transactions")
+top10transacciones <- sort(itemFrequency(MatrizSinBots, type = "absolute"),decreasing = T)[1:10]
+print("Las 10 transacciones con mayor numero de apariciones son:")
+print(top10transacciones)
+
+itemFrequencyPlot(MatrizSinBots,topN=10,type="absolute", main = "Las 10 transacciones con mayor numero de apariciones.")
 
 
 
-
-rules <- apriori(matriz,parameter = list(support = 0.000001, confidence = 0.0))
-summary(rules) 
-rules<-sort(rules, by="support", decreasing=TRUE)
-options(digits=2)
-inspect(rules[1:5])
-
-plot(rules,method="graph",interactive=TRUE,shading=NA)
-head(quality(rules));
-
-plot(rules, measure=c("support","lift"), shading="confidence");
-
-plot(rules, shading="order", control=list(main ="Two-key plot"));
-
-inspect(subset(rules, subset = rhs %in% deporte/articulo1))
-inspect(subset(rules, subset = lhs %ain% c("item1")))
-
-inspect(subset(rules, subset = lhs %ain% c("deportes/articulo1","internacional/articulo1","comunidad/articulo2") ))
-rules<-sort(x, by="support", decreasing=TRUE)
-inspect(x)

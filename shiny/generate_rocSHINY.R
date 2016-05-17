@@ -19,7 +19,7 @@ runApp(
       ),
       
       mainPanel(
-        # This is the dynamic UI for the plots
+        
         uiOutput("plots")
       )),
     
@@ -48,8 +48,7 @@ runApp(
           
         })
         
-        # Convert the list to a tagList - this is necessary for the list of items
-        # to display properly.
+      
         do.call(tagList, plot_output_list)
         
         
