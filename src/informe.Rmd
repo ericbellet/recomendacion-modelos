@@ -1,15 +1,15 @@
 ---
-title: "Recomendación de artículos"
+title: "Sistemas de recomendación y evaluación de modelos"
 author: "Eric Bellet"
-date: "17 mai 2016"
+date: "18 mayo 2016"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-# Introducción
+#Sistemas de recomendación
+## Introducción
 El siguiente sistema de recomendación esta basado en en 131000 transacciones de artículos de un periódico, donde existen 9 artículos por cada contenido, los cuales son:
 
 * Deportes.  
@@ -22,7 +22,7 @@ El siguiente sistema de recomendación esta basado en en 131000 transacciones de 
 * Negocios.
 * Opinión.
 
-# Arules
+## Arules
 Se utilizó el paquete arules de R para poder generar reglas de asociación.
 ```{r, echo=FALSE, results='hide', include=FALSE}
 
@@ -55,12 +55,12 @@ periodico <- read.csv("data/periodico.csv")
 ```
 
 
-# Primera parte
-Modi???car su dataset de tal manera que no se lean los identi???cadores de los artículos como itemN sino por su tipo de contenido contenido/articuloN. Ejemplo: {item1, item10, item81} es la transacción {deportes/articulo1, politica/articulo1, opinion/articulo9}.
+##Primera parte
+Modificar su dataset de tal manera que no se lean los identificadores de los artículos como itemN sino por su tipo de contenido contenido/articuloN. Ejemplo: {item1, item10, item81} es la transacción {deportes/articulo1, politica/articulo1, opinion/articulo9}.
 
 Para modificar el dataset dada estas condiciones se realizó lo siguiente:
 
-* Se cambio el nombre la columna 5 y se creó la columna *articles* y se llenó con vectores númericos que representan los items que observó el usuario.
+* Se cambio el nombre la columna 5 y se creó la columna **articles** y se llenó con vectores númericos que representan los items que observó el usuario.
 ```{r}
 #Cambio el nombre de la columna para que tenga coherencia con el ejemplo dado.
 colnames(periodico)[5] <- "items"
@@ -149,7 +149,7 @@ Este es el resultado de la primera parte.
 ```{r}
 head(periodico[,c(1,5,6,7)])
 ```
-# Generación de matriz de transacciones
+## Generación de matriz de transacciones
 Para poder generar las reglas utilizando el paquete **arules** es necesario tener una matriz de transacciones, para crearla se realizó lo siguiente.
 
  Se utilizó la función **llenar**, el cual dado lo un vector númerico que representa los items va llenando con 1 aquellos artículos que el usuario observó.
@@ -191,7 +191,7 @@ colnames(matriz) <-  c(gsub(" ","",paste("deportes/articulo",1:9)),gsub(" ","",p
                        gsub(" ","",paste("comunidad/articulo",1:9)), gsub(" ","",paste("negocios/articulo",1:9)),
                        gsub(" ","",paste("opinion/articulo",1:9)))
 ```
-# Detección de usuarios bots
+## Detección de usuarios bots
 El periódico tiene sospechas de que existen bots que están ganando dinero al hacer clicks en artículos con promociones. En consecuencia, le piden a usted que realice un análisis exploratorio sobre las transacciones para determinar el número de posibles transacciones bot que tienen en su dataset (ellos aceptan que si una persona ve un artículo más de 20 segundos entonces no es un bot). 
 
 Para calcular el número de articulos que observó un usuario se suman las filas de la matriz de transacciones, y luego utilizando el **tiempo total** de un usuario observando los artículos, se calcula cuales son los usuarios **bots** bajo el criterio si una persona ve un artículo 20 segundos o menos entonces es un bot.
@@ -201,8 +201,9 @@ Para calcular el número de articulos que observó un usuario se suman las filas d
 periodico$numItems <- rowSums(matriz)
 numerobots <- periodico[periodico$numItems >= periodico$tiempototal/20,]
 print(paste("El numero de transacciones bot es:",nrow(numerobots)))  
-
-
+```
+Finalmente nos interesa generar las reglas de asociación sin los usuarios bots, por lo tanto se eliminan del dataset y de la matriz de transacciones.
+```{r}
 periodicoSinBots <- periodico[-numerobots$X,]
 #Utilizamos la matriz de transacciones sin las transacciones bots.
 matriz <- matriz[-numerobots$X,]
@@ -210,10 +211,12 @@ matriz <- matriz[-numerobots$X,]
 mm <- matriz
 matriz <- as(matriz, "transactions")
 ```
-Finalmente nos interesa generar las reglas de asociación sin los usuarios bots, por lo tanto se eliminan del dataset y de la matriz de transacciones.
 
-# Segunda parte
+
+## Segunda parte
 Conocer los tipos de usuarios que ingresan a su página (ellos creen que son 8 tipos de usuarios) y tratar de determinar la proporción de cada tipo de usuario.
+
+En esta fase existen 2 enfoques, el primero es ver los tipos de usuarios solamente por el tipo de **contenido** que ven y el segundo por **contenido y artículo**. Mi criterio fue hacerlo por **contenido y artículo** ya que me parece más específico, por ejemplo: supongamos que deportes/articulo1 habla sobre beisbol, deportes/artículo2 habla sobre fútbol, es distinto un tipo de usuario que solo por contenido (deportes) a uno por **contenido/artículo**.
 
 Si agrupamos utilizando el **lhs** de las reglas, obtenemos estos 8 grupos:
 ```{r}
@@ -228,9 +231,21 @@ kmedias <- kmeans(mm, 8,algorithm = "Hartigan-Wong")
 periodicoSinBots$cluster <- kmedias$cluster
 table(periodicoSinBots$cluster)
 ```
-La propagación por afinidad toma como conjunto de datos principal similitudes entre los datos. El objetivo es minimizar los errores al cuadrado, cada similaridad se establece como el inverso del error cuadrado (distancia euclídea).
+Luego probamos con clusterización mediante **propagación por afinidad** que toma como conjunto de datos principal similitudes entre los datos. El objetivo es minimizar los errores al cuadrado, cada similaridad se establece como el inverso del error cuadrado (distancia euclídea). Este es un algoritmo de agrupamiento, (clustering), dado un conjunto de puntos y una medida de similaridad entre ellos, proporciona grupos de puntos similares y además para cada grupo da un ejemplar representativo. La medida de similaridad es la información mutua entre cada par de variables aleatorias, la cual expresa la información que ellas comparten.
 
-Podemos observar que utilizando clusterización mediante la propagación por afinidad detecta 8 clusters donde los tipos de usuarios son los siguientes:
+El número de grupos o clusters no se determina de antemano, sino que es entregado por el algoritmo de propagación de afinidades. El tamaño de cada cluster determina obviamente el número de factores que aparecen en cada distribución marginal y por lo tanto el número de parámetros a estimar. 
+
+Podemos observar que utilizando clusterización mediante la propagación por afinidad detecta **8 clusters** donde los tipos de usuarios son los siguientes:
+* deportes-articulos1.
+* variedades-articulo4.
+* sucesos-articulo1.
+* sucesos-articulo6.
+* negocios-articulo4.
+* negocios-articulo-7.
+* opinion-articulo4.
+* opinion-articulo7.
+
+
 ```{r}
 #Calculamos la matriz de similaridad utilizando el inverso del error cuadrado (distancia euclidea).
 sim <- crossprod(mm)
@@ -240,8 +255,10 @@ clust_ap <- apcluster(sim)
 show(clust_ap)
 ```
 
-# Tercera parte
-Dado un usuario nuevo que haya ingresado a n artículos (n variable), poder recomendar un artículo n+1 y así aumentar el compromiso del cliente con su portal web. Como usted sabe, para poder calcular las reglas necesita como entrada MinSupport y MinCon???anza. Sin embargo, el cliente desconoce cuáles son estos valores en consecuencia es tarea de usted determinar y justi???car los mismos de acuerdo a su criterio. 
+
+
+##Tercera parte
+Dado un usuario nuevo que haya ingresado a n artículos (n variable), poder recomendar un artículo n+1 y así aumentar el compromiso del cliente con su portal web. Como usted sabe, para poder calcular las reglas necesita como entrada MinSupport y MinCofianza. Sin embargo, el cliente desconoce cuáles son estos valores en consecuencia es tarea de usted determinar y justficar los mismos de acuerdo a su criterio. 
 
 Para recomendar un artículo n + 1 a un usuario se utilizó reglas de asociación. La función implementada es **recomendar** que recibe la matriz de transacciones y el n que representa los artículos ingresados por el usuario. Se generan las reglas con el algoritmo **apriori** con un soporte alto y una confianza baja, en caso de no encontrar un **lhs** en las reglas generadas se va disminuyendo el soporte hasta que se generen reglas, en el caso que no se generen reglas en una cantidad de iteraciones, se recomienda el **rhs** o artículo más popular o que tenga mayor número de apariciones. En el caso que si se generan reglas, se ordenan por confianza de mayor a menor, luego se toman todas las reglas que tengan la misma **confianza máxima** y se ordenan por **soporte** de mayor a menor y finalmente se recomienda el artículo que tenga mayor soporte. En otras palabras se toman las reglas que tengan la confianza máxima y luego la que tenga mayor soporte.
 
@@ -356,7 +373,7 @@ articuloARecomendar <- recomendar(n, matriz)
 print(paste("El artículo que se recomienda es:", articuloARecomendar))
 ```
 
-# Cuarta parte
+## Cuarta parte
 Conocer las 10 visitas con mayor tiempo de estadía en la página y las 10 visitas con menor tiempo de estadía en la página.
 * Las 10 visitas con mayor tiempo de estadía en la página:
 ```{r}
@@ -372,7 +389,7 @@ print(timemenor10)
 ```
 
 
-# Quinta parte
+## Quinta parte
 Conocer las 10 transacciones con mayor número de apariciones en el dataset.
 
 * Los 10 articulos con mayor numero de apariciones.
@@ -400,3 +417,154 @@ itemFrequencyPlot(MatrizSinBots,topN=10,type="absolute", main = "Las 10 transacc
 
 ```
 
+# Evaluación de modelos
+
+Las curvas ROC(Receiver Operating Characteristics) son grá???cos usados como técnica de visualización, organización y selección de clasi???cadores basados en su rendimiento.Los parámetros de gra???cador son:
+
+1. Los scores por instancia (no necesariamente ordenados). 
+2. La verdadera clase de las instancias. 
+3. La clase target. En el caso de que nclass > 2 entonces haga un enfoque 1 vs all.
+
+
+```{r eval=FALSE}
+generate_ROC <- function(scores, real, target){ 
+  # Genera una curva de ROC.
+  #
+  # Args:
+  #   scores: Los scores por instancia (no necesariamente ordenados). 
+  #   real: La verdadera clase de las instancias.
+  #   target:  La clase target. En el caso de que nclass > 2 entonces haga un enfoque 1 vs all.
+  #
+  # Returns:
+  #   Genera la curva ROC.
+  
+  
+  #En caso que hayan 2 clases nada mas.
+  if (length(unique(real)) <= 2){
+    df <- data.frame(scores,real)
+    df <- df[order(df$scores, decreasing = TRUE),]
+    graficador(df$scores, df$real, target)
+    
+  }else{
+    #En caso que hayan mas de 2 clases.
+   
+   clases <- unique(real)
+   clases <- clases[!clases %in% target]
+   
+  #-------------1 vs all---------------------
+    for (i in 1:length(clases)) {
+       #Se toma el valor positivo como uno solo, y los demas como negativos.
+       df <- data.frame(scores,real)
+       class1 <- df[df$real == target,]
+       class2 <- df[df$real == clases[i],]
+       df <- merge(x = class1, y = class2, all = TRUE)
+       df <- df[order(df$scores, decreasing = TRUE),]
+       graficador(df$scores, df$real, target)
+    }
+   
+  }#endif
+  
+}#endfunction
+```
+
+La función graficador va graficando los puntos y uniendo las líneas.
+```{r eval=FALSE}
+
+
+graficador <- function(scores, real, target){
+  # Genera una curva de ROC.
+  #
+  # Args:
+  #   scores: Los scores por instancia (no necesariamente ordenados). 
+  #   real: La verdadera clase de las instancias.
+  #   target:  La clase target. En el caso de que nclass > 2 entonces haga un enfoque 1 vs all.
+  #
+  # Returns:
+  #   Genera la curva ROC.
+  divy <- 1/length(which(real==target))
+  divx <- 1/(length(real)-length(which(real==target)))
+  contx <- 0
+  conty <- 0
+ 
+  negativaclase <- unique(real)
+  negativaclase <- negativaclase[!negativaclase %in% target]
+ 
+  
+  plot(x=NULL,y=NULL,xlim=c(0, 1), ylim=c(0, 1), xlab="False positive rate", ylab="True positive rate",main=paste("Clase target:",target,".","Clase negativa:", negativaclase[1],"."))
+  lines(x = c(0,1), y = c(0,1), col = "blue")
+  puntosx <<- c(contx)
+  puntosy <<- c(conty)
+  id <- order(puntosx)
+  
+  
+  i <- 1
+  while (i != (length(scores)+1)){
+    puntosx <<- c(puntosx, contx)
+    puntosy <<- c(puntosy, conty)
+    #Existen varios elementos con el mismo score??
+    samescore <- length(which(scores==scores[i]))
+    if (samescore > 1){
+      contador <- 0
+      contxORIGEN <- contx
+      contyORIGEN <- conty
+      points(contx, conty, col = "red")
+      while (contador != samescore ) {
+        #Si es target
+        if (real[i] == target){
+          
+          #points(contx, conty, col = "red")
+          
+          conty <- conty + divy
+          
+          
+        }else{
+          #Si es negativo
+          #points(contx, conty, col = "red")
+          
+          contx <- contx + divx
+        }
+        #capaz hay que restar
+        i <- i + 1
+        contador <- contador + 1
+        
+      }#endwhile
+     
+      lines(x = c(contxORIGEN, contx) , y = c(contyORIGEN,conty), col = "green")
+    }else{
+    
+    
+    
+    #Si es target
+    if (real[i] == target){
+     
+      points(contx, conty, col = "red")
+      
+      lines(x = c(contx, contx), y = c(conty, conty + divy) , col = "green")
+      
+      conty <- conty + divy
+      i <- i + 1
+      
+    }else{
+    #Si es negativo
+      points(contx, conty, col = "red")
+      
+      lines(x = c(contx, contx + divx) , y = c(conty,conty), col = "green")
+      
+      contx <- contx + divx
+      i <- i + 1
+    }
+    
+    }
+    
+  }#endfor
+  #Grafico el ultimo punto.
+  puntosx <<- c(puntosx,1)
+  puntosy <<- c(puntosy,1)
+  points(1, 1, col = "red")
+  lines(x = c(contx, 1), y = c(conty, 1) , col = "green")
+  
+  #???legend("bottomright", title = paste("ROC area:",auc(puntosx, puntosy)))
+}#endgraficador
+
+```
+En la carpeta **shiny** se encuentra la aplicación hecha en shiny de esta parte.

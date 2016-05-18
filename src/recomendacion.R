@@ -315,16 +315,6 @@ matriz <- matriz[-numerobots$X,]
   
 #colnames(matrix2) <- c("deportes","politica","variedades","internacional","nacionales", "sucesos","comunidad","negocios","opinion")
 
-
-rules <- apriori(matriz,parameter = list(support = 0.000008019181883, confidence = 1.0))
-
-plot(rules, method = "grouped", control = list(k = 8))
-
-#ruledf = data.frame(
-#  lhs = labels(lhs(rules)),
-# rhs = labels(rhs(rules)))
-
-
 kmedias <- kmeans(matriz, 8,algorithm = "Hartigan-Wong")
 periodicoSinBots$cluster <- kmedias$cluster
 table(periodicoSinBots$cluster)
@@ -335,6 +325,18 @@ sim <- sim / sqrt(sim)
 #Corremos la affinity propagation
 clust_ap <- apcluster(sim) 
 show(clust_ap)
+
+
+matriz <<- as(matriz, "transactions")
+
+rules <- apriori(matriz,parameter = list(support = 0.000008019181883, confidence = 1.0))
+
+plot(rules, method = "grouped", control = list(k = 8))
+
+#ruledf = data.frame(
+#  lhs = labels(lhs(rules)),
+# rhs = labels(rhs(rules)))
+
 ##-------------------------------FIN PARTE 2------------------------------------
 ##-------------------------------PARTE 3------------------------------------
 #3. Dado un usuario nuevo que haya ingresado a n artículos (n variable), 
@@ -344,12 +346,9 @@ show(clust_ap)
 #son estos valores en consecuencia es tarea de usted determinar y justi???car los 
 #mismos de acuerdo a su criterio
 
-#Matriz de transacciones
-matriz <- as(matriz, "transactions")
-
 print("Introduzca los n articulos:")
-n <- c("deportes/articulo1","internacional/articulo1", "comunidad/articulo1")
-n <- c("deportes/articulo6","deportes/articulo9")
+#n <- c("deportes/articulo1","internacional/articulo1", "comunidad/articulo1")
+#n <- c("deportes/articulo6","deportes/articulo9")
 n <- c("deportes/articulo6","internacional/articulo9")
 articuloARecomendar <- recomendar(n, matriz)
 print(paste("El artículo que se recomienda es:", articuloARecomendar))
