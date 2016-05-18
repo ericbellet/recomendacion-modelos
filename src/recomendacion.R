@@ -327,7 +327,7 @@ plot(rules, method = "grouped", control = list(k = 8))
 
 kmedias <- kmeans(matriz, 8,algorithm = "Hartigan-Wong")
 periodicoSinBots$cluster <- kmedias$cluster
-
+table(periodicoSinBots$cluster)
 
 #Calculamos la matriz de similaridad utilizando el inverso del error cuadrado (distancia euclidea).
 sim <- crossprod(matriz)

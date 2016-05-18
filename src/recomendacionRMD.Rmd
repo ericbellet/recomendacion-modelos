@@ -1,5 +1,5 @@
 ---
-title: "Recomendaci√≥n de art√≠culos"
+title: "RecomendaciÛn de artÌculos"
 author: "Eric Bellet"
 date: "17 mai 2016"
 output: html_document
@@ -9,8 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Introducci√≥n
-El siguiente sistema de recomendaci√≥n esta basado en en 131000 transacciones de art√≠culos de un peri√≥dico, donde existen 9 art√≠culos por cada contenido, los cuales son:
+# IntroducciÛn
+El siguiente sistema de recomendaciÛn esta basado en en 131000 transacciones de artÌculos de un periÛdico, donde existen 9 artÌculos por cada contenido, los cuales son:
 
 * Deportes.  
 * Politica.
@@ -20,10 +20,10 @@ El siguiente sistema de recomendaci√≥n esta basado en en 131000 transacciones de
 * Sucesos.
 * Comunidad.
 * Negocios.
-* Opini√≥n.
+* OpiniÛn.
 
 # Arules
-Se utiliz√≥ el paquete arules de R para poder generar reglas de asociaci√≥n.
+Se utilizÛ el paquete arules de R para poder generar reglas de asociaciÛn.
 ```{r, echo=FALSE, results='hide', include=FALSE}
 
 ###############CAMBIAR##########################
@@ -32,20 +32,20 @@ setwd("C:/Users/Eric/Desktop/recomendacion-modelos/")
 
 install = function(pkg)
 {
-  # Si ya est√° instalado, no lo instala.
+  # Si ya est· instalado, no lo instala.
   if (!require(pkg, character.only = TRUE)) {
     install.packages(pkg)
     if (!require(pkg, character.only = TRUE)) stop(paste("load failure:", pkg))
   }
 }
 
-#Instalo automaticamente los paquetes.
 install('arules')
 install('arulesViz')
-
+install('apcluster')
 #Cargo las librerias.
 library(arules)
 library(arulesViz)
+library(apcluster)
 
 ##-------------------------------LECTURA -----------------------------------
 
@@ -56,11 +56,11 @@ periodico <- read.csv("data/periodico.csv")
 
 
 # Primera parte
-ModiÔ¨Åcar su dataset de tal manera que no se lean los identiÔ¨Åcadores de los art√≠culos como itemN sino por su tipo de contenido contenido/articuloN. Ejemplo: {item1, item10, item81} es la transacci√≥n {deportes/articulo1, politica/articulo1, opinion/articulo9}.
+Modi???car su dataset de tal manera que no se lean los identi???cadores de los artÌculos como itemN sino por su tipo de contenido contenido/articuloN. Ejemplo: {item1, item10, item81} es la transacciÛn {deportes/articulo1, politica/articulo1, opinion/articulo9}.
 
-Para modificar el dataset dada estas condiciones se realiz√≥ lo siguiente:
+Para modificar el dataset dada estas condiciones se realizÛ lo siguiente:
 
-* Se cambio el nombre la columna 5 y se cre√≥ la columna *articles* y se llen√≥ con vectores n√∫mericos que representan los items que observ√≥ el usuario.
+* Se cambio el nombre la columna 5 y se creÛ la columna *articles* y se llenÛ con vectores n˙mericos que representan los items que observÛ el usuario.
 ```{r}
 #Cambio el nombre de la columna para que tenga coherencia con el ejemplo dado.
 colnames(periodico)[5] <- "items"
@@ -68,18 +68,18 @@ colnames(periodico)[5] <- "items"
 periodico$articles <- periodico$items
 
 #Se sabe que el portal ofrece 9 tipos de contenidos 
-#y nos ofrecen solo informaci√≥n de 9 art√≠culos.
+#y nos ofrecen solo informaciÛn de 9 artÌculos.
 
 #Obtengo el numero de los articulos.
 periodico$articles <- strsplit(gsub("[{}item]","",periodico$articles), ",")
 ```
-* Dado los vectores de cada fila de la columna *articles* se modific√≥ para que tuviera el formato *contenido/articuloN* utilizando la funci√≥n genArticles.
+* Dado los vectores de cada fila de la columna *articles* se modificÛ para que tuviera el formato *contenido/articuloN* utilizando la funciÛn genArticles.
 ```{r}
 genArticles <- function(articles){
   # Genera la columna articles utilizando los items.
   #
   # Args:
-  #   articles: Son arreglos n√∫mericos que representan los items (EJ: {item1,item9,item63} -> 1,9,63)
+  #   articles: Son arreglos n˙mericos que representan los items (EJ: {item1,item9,item63} -> 1,9,63)
   #
   # Returns:
   #   Retorna la columna articles.
@@ -131,7 +131,7 @@ genArticles <- function(articles){
 #Modifico el dataset con las condiciones dadas.
 periodico$articles <- lapply(periodico$articles, genArticles)
 ```
-* Finalmente se realizan modificaciones en la columna articles para que tengan el formato adecuado y se calcula el tiempo total que estuv√≥ un usuario observando los art√≠culos.
+* Finalmente se realizan modificaciones en la columna articles para que tengan el formato adecuado y se calcula el tiempo total que estuvÛ un usuario observando los artÌculos.
 
 ```{r}
 #Convierto los espacios en ,
@@ -149,10 +149,10 @@ Este es el resultado de la primera parte.
 ```{r}
 head(periodico[,c(1,5,6,7)])
 ```
-# Generaci√≥n de matriz de transacciones
-Para poder generar las reglas utilizando el paquete **arules** es necesario tener una matriz de transacciones, para crearla se realiz√≥ lo siguiente.
+# GeneraciÛn de matriz de transacciones
+Para poder generar las reglas utilizando el paquete **arules** es necesario tener una matriz de transacciones, para crearla se realizÛ lo siguiente.
 
- Se utiliz√≥ la funci√≥n **llenar**, el cual dado lo un vector n√∫merico que representa los items va llenando con 1 aquellos art√≠culos que el usuario observ√≥.
+ Se utilizÛ la funciÛn **llenar**, el cual dado lo un vector n˙merico que representa los items va llenando con 1 aquellos artÌculos que el usuario observÛ.
 ```{r}
 #Generar la matriz de transacciones.
 #fila es un row inicializado en 0.
@@ -178,7 +178,7 @@ llenar <- function(periodico,fila){
 matriz <- lapply(periodico$items, llenar,fila)
 
 ```
-Transformo el resultado obtenido por la funci√≥n **llenar** en una matriz y se le asigna el nombre correspondiente a cada columna.
+Transformo el resultado obtenido por la funciÛn **llenar** en una matriz y se le asigna el nombre correspondiente a cada columna.
 ```{r}
 
 #Transformo matriz en una matrix.
@@ -191,13 +191,13 @@ colnames(matriz) <-  c(gsub(" ","",paste("deportes/articulo",1:9)),gsub(" ","",p
                        gsub(" ","",paste("comunidad/articulo",1:9)), gsub(" ","",paste("negocios/articulo",1:9)),
                        gsub(" ","",paste("opinion/articulo",1:9)))
 ```
-# Detecci√≥n de usuarios bots
-El peri√≥dico tiene sospechas de que existen bots que est√°n ganando dinero al hacer clicks en art√≠culos con promociones. En consecuencia, le piden a usted que realice un an√°lisis exploratorio sobre las transacciones para determinar el n√∫mero de posibles transacciones bot que tienen en su dataset (ellos aceptan que si una persona ve un art√≠culo m√°s de 20 segundos entonces no es un bot). 
+# DetecciÛn de usuarios bots
+El periÛdico tiene sospechas de que existen bots que est·n ganando dinero al hacer clicks en artÌculos con promociones. En consecuencia, le piden a usted que realice un an·lisis exploratorio sobre las transacciones para determinar el n˙mero de posibles transacciones bot que tienen en su dataset (ellos aceptan que si una persona ve un artÌculo m·s de 20 segundos entonces no es un bot). 
 
-Para calcular el n√∫mero de articulos que observ√≥ un usuario se suman las filas de la matriz de transacciones, y luego utilizando el **tiempo total** de un usuario observando los art√≠culos, se calcula cuales son los usuarios **bots** bajo el criterio si una persona ve un art√≠culo 20 segundos o menos entonces es un bot.
+Para calcular el n˙mero de articulos que observÛ un usuario se suman las filas de la matriz de transacciones, y luego utilizando el **tiempo total** de un usuario observando los artÌculos, se calcula cuales son los usuarios **bots** bajo el criterio si una persona ve un artÌculo 20 segundos o menos entonces es un bot.
 ```{r}
-#El n√∫mero de posibles transacciones bot que tienen en su dataset 
-#(ellos aceptan que si una persona ve un art√≠culo m√°s de 20 segundos entonces no es un bot). 
+#El n˙mero de posibles transacciones bot que tienen en su dataset 
+#(ellos aceptan que si una persona ve un artÌculo m·s de 20 segundos entonces no es un bot). 
 periodico$numItems <- rowSums(matriz)
 numerobots <- periodico[periodico$numItems >= periodico$tiempototal/20,]
 print(paste("El numero de transacciones bot es:",nrow(numerobots)))  
@@ -207,17 +207,43 @@ periodicoSinBots <- periodico[-numerobots$X,]
 #Utilizamos la matriz de transacciones sin las transacciones bots.
 matriz <- matriz[-numerobots$X,]
 #Matriz de transacciones
+mm <- matriz
 matriz <- as(matriz, "transactions")
 ```
-Finalmente nos interesa generar las reglas de asociaci√≥n sin los usuarios bots, por lo tanto se eliminan del dataset y de la matriz de transacciones.
+Finalmente nos interesa generar las reglas de asociaciÛn sin los usuarios bots, por lo tanto se eliminan del dataset y de la matriz de transacciones.
 
 # Segunda parte
-Conocer los tipos de usuarios que ingresan a su p√°gina (ellos creen que son 8 tipos de usuarios) y tratar de determinar la proporci√≥n de cada tipo de usuario.
+Conocer los tipos de usuarios que ingresan a su p·gina (ellos creen que son 8 tipos de usuarios) y tratar de determinar la proporciÛn de cada tipo de usuario.
+
+Si agrupamos utilizando el **lhs** de las reglas, obtenemos estos 8 grupos:
+```{r}
+rules <- apriori(matriz,parameter = list(support = 0.000008019181883, confidence = 1.0))
+
+plot(rules, method = "grouped", control = list(k = 8))
+```
+
+Utilizando **kmedias** usando el algoritmo de **Harting-Wong** se obtiene la siguiente proporciÛn de cada cluster:
+```{r}
+kmedias <- kmeans(mm, 8,algorithm = "Hartigan-Wong")
+periodicoSinBots$cluster <- kmedias$cluster
+table(periodicoSinBots$cluster)
+```
+La propagaciÛn por afinidad toma como conjunto de datos principal similitudes entre los datos. El objetivo es minimizar los errores al cuadrado, cada similaridad se establece como el inverso del error cuadrado (distancia euclÌdea).
+
+Podemos observar que utilizando clusterizaciÛn mediante la propagaciÛn por afinidad detecta 8 clusters donde los tipos de usuarios son los siguientes:
+```{r}
+#Calculamos la matriz de similaridad utilizando el inverso del error cuadrado (distancia euclidea).
+sim <- crossprod(mm)
+sim <- sim / sqrt(sim)
+#Corremos la affinity propagation
+clust_ap <- apcluster(sim) 
+show(clust_ap)
+```
 
 # Tercera parte
-Dado un usuario nuevo que haya ingresado a n art√≠culos (n variable), poder recomendar un art√≠culo n+1 y as√≠ aumentar el compromiso del cliente con su portal web. Como usted sabe, para poder calcular las reglas necesita como entrada MinSupport y MinConÔ¨Åanza. Sin embargo, el cliente desconoce cu√°les son estos valores en consecuencia es tarea de usted determinar y justiÔ¨Åcar los mismos de acuerdo a su criterio. 
+Dado un usuario nuevo que haya ingresado a n artÌculos (n variable), poder recomendar un artÌculo n+1 y asÌ aumentar el compromiso del cliente con su portal web. Como usted sabe, para poder calcular las reglas necesita como entrada MinSupport y MinCon???anza. Sin embargo, el cliente desconoce cu·les son estos valores en consecuencia es tarea de usted determinar y justi???car los mismos de acuerdo a su criterio. 
 
-Para recomendar un art√≠culo n + 1 a un usuario se utiliz√≥ reglas de asociaci√≥n. La funci√≥n implementada es **recomendar** que recibe la matriz de transacciones y el n que representa los art√≠culos ingresados por el usuario. Se generan las reglas con el algoritmo **apriori** con un soporte alto y una confianza baja, en caso de no encontrar un **lhs** en las reglas generadas se va disminuyendo el soporte hasta que se generen reglas, en el caso que no se generen reglas en una cantidad de iteraciones, se recomienda el **rhs** o art√≠culo m√°s popular o que tenga mayor n√∫mero de apariciones. En el caso que si se generan reglas, se ordenan por confianza de mayor a menor, luego se toman todas las reglas que tengan la misma **confianza m√°xima** y se ordenan por **soporte** de mayor a menor y finalmente se recomienda el art√≠culo que tenga mayor soporte. En otras palabras se toman las reglas que tengan la confianza m√°xima y luego la que tenga mayor soporte.
+Para recomendar un artÌculo n + 1 a un usuario se utilizÛ reglas de asociaciÛn. La funciÛn implementada es **recomendar** que recibe la matriz de transacciones y el n que representa los artÌculos ingresados por el usuario. Se generan las reglas con el algoritmo **apriori** con un soporte alto y una confianza baja, en caso de no encontrar un **lhs** en las reglas generadas se va disminuyendo el soporte hasta que se generen reglas, en el caso que no se generen reglas en una cantidad de iteraciones, se recomienda el **rhs** o artÌculo m·s popular o que tenga mayor n˙mero de apariciones. En el caso que si se generan reglas, se ordenan por confianza de mayor a menor, luego se toman todas las reglas que tengan la misma **confianza m·xima** y se ordenan por **soporte** de mayor a menor y finalmente se recomienda el artÌculo que tenga mayor soporte. En otras palabras se toman las reglas que tengan la confianza m·xima y luego la que tenga mayor soporte.
 
 ```{r eval=FALSE}
 recomendar <- function(n, matriz){
@@ -327,27 +353,27 @@ n <- c("deportes/articulo6","internacional/articulo9")
 articuloARecomendar <- recomendar(n, matriz)
 ```
 ```{r}
-print(paste("El art√≠culo que se recomienda es:", articuloARecomendar))
+print(paste("El artÌculo que se recomienda es:", articuloARecomendar))
 ```
 
 # Cuarta parte
-Conocer las 10 visitas con mayor tiempo de estad√≠a en la p√°gina y las 10 visitas con menor tiempo de estad√≠a en la p√°gina.
-* Las 10 visitas con mayor tiempo de estad√≠a en la p√°gina:
+Conocer las 10 visitas con mayor tiempo de estadÌa en la p·gina y las 10 visitas con menor tiempo de estadÌa en la p·gina.
+* Las 10 visitas con mayor tiempo de estadÌa en la p·gina:
 ```{r}
 timemayor10 <- periodicoSinBots[order(periodicoSinBots$tiempototal,decreasing = T),][1:10,c(1,7)]
-print("10 visitas con mayor tiempo de estad√≠a en la p√°gina:")
+print("10 visitas con mayor tiempo de estadÌa en la p·gina:")
 print(timemayor10)
 ```
-* Las 10 visitas con menor tiempo de estad√≠a en la p√°gina:
+* Las 10 visitas con menor tiempo de estadÌa en la p·gina:
 ```{r}
 timemenor10 <-  periodicoSinBots[order(periodicoSinBots$tiempototal,decreasing = F),][1:10,c(1,7)]
-print("10 visitas con menor tiempo de estad√≠a en la p√°gina:")
+print("10 visitas con menor tiempo de estadÌa en la p·gina:")
 print(timemenor10)
 ```
 
 
 # Quinta parte
-Conocer las 10 transacciones con mayor n√∫mero de apariciones en el dataset.
+Conocer las 10 transacciones con mayor n˙mero de apariciones en el dataset.
 
 * Los 10 articulos con mayor numero de apariciones.
 ```{r}
@@ -361,7 +387,7 @@ itemFrequencyPlot(matriz,topN=10,type="absolute", main ="Los 10 articulos con ma
 #TRANSACCIONES:
 ```
 
-* Las 10 transacciones con mayor n√∫mero de apariciones en el dataset.
+* Las 10 transacciones con mayor n˙mero de apariciones en el dataset.
 ```{r}
 
 MatrizSinBots = split(periodicoSinBots$articles,periodicoSinBots$X)
