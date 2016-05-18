@@ -24,7 +24,7 @@ El siguiente sistema de recomendación esta basado en en 131000 transacciones de
 
 # Arules
 Se utilizó el paquete arules de R para poder generar reglas de asociación.
-```{r}
+```{r, echo=FALSE, results='hide', include=FALSE}
 
 ###############CAMBIAR##########################
 setwd("C:/Users/Eric/Desktop/recomendacion-modelos/")
@@ -217,4 +217,160 @@ Conocer los tipos de usuarios que ingresan a su página (ellos creen que son 8 t
 # Tercera parte
 Dado un usuario nuevo que haya ingresado a n artículos (n variable), poder recomendar un artículo n+1 y así aumentar el compromiso del cliente con su portal web. Como usted sabe, para poder calcular las reglas necesita como entrada MinSupport y MinConﬁanza. Sin embargo, el cliente desconoce cuáles son estos valores en consecuencia es tarea de usted determinar y justiﬁcar los mismos de acuerdo a su criterio. 
 
+Para recomendar un artículo n + 1 a un usuario se utilizó reglas de asociación. La función implementada es **recomendar** que recibe la matriz de transacciones y el n que representa los artículos ingresados por el usuario. Se generan las reglas con el algoritmo **apriori** con un soporte alto y una confianza baja, en caso de no encontrar un **lhs** en las reglas generadas se va disminuyendo el soporte hasta que se generen reglas, en el caso que no se generen reglas en una cantidad de iteraciones, se recomienda el **rhs** o artículo más popular o que tenga mayor número de apariciones. En el caso que si se generan reglas, se ordenan por confianza de mayor a menor, luego se toman todas las reglas que tengan la misma **confianza máxima** y se ordenan por **soporte** de mayor a menor y finalmente se recomienda el artículo que tenga mayor soporte. En otras palabras se toman las reglas que tengan la confianza máxima y luego la que tenga mayor soporte.
+
+```{r eval=FALSE}
+recomendar <- function(n, matriz){
+  #plot(rules,method="graph",interactive=TRUE,shading=NA)
+  #plot(rules, measure=c("support","lift"), shading="confidence");
+  #plot(rules, shading="order", control=list(main ="Two-key plot"));
+ 
+
+  rules <- apriori(matriz,parameter = list(support = 0.1, confidence = 0.0))
+  
+  reglas <- subset(rules, subset = lhs %ain% n )
+
+  len <- length(reglas)
+  div <- 0.1
+  cont <- 0
+  #En el caso que no se generaron reglas con ese soporte, voy disminuyendo el soporte
+  while (len == 0){
+    div <- div /10
+    rules <- apriori(matriz,parameter = list(support = div, confidence = 0.0))
+    reglas <- subset(rules, subset = lhs %ain% n )
+    len <- length(reglas)
+    cont <- cont + 1
+    #Un criterio de parada ya que puede ser infinito
+    if (cont == 7){
+      break()
+    }
+  }
+  if (length(reglas)==0){
+    trendigtop<-inspect(rules@rhs)
+    return(row.names(sort(table(trendigtop),decreasing=TRUE))[1])
+  }else{
+ 
+  confianzaAlta <-sort(reglas, decreasing = TRUE, 
+                       na.last = NA,by = "confidence",
+                       order = FALSE)
+
+  #Obtengo la confianza maxima para luego tomar todos los articulos que posean esa confianza
+  maxConfianza <- max(quality((confianzaAlta))[2])
+  #Posiciones que poseen la misma confianza.
+  confianzaAlta<- subset(confianzaAlta, subset = confidence == maxConfianza)
+  
+  
+  #Ahora ordeno por soporte las que tienen la confianza mas alta
+  soportealto <- (sort(confianzaAlta, decreasing = TRUE, 
+                                 na.last = NA,by = "support",
+                                 order = FALSE)[1])
+  articulorecomendar <- inspect(soportealto@rhs[1])
+  return(articulorecomendar$items[1])
+  }
+}
+
+n <- c("deportes/articulo6","internacional/articulo9")
+articuloARecomendar <- recomendar(n, matriz)
+```
+
+```{r, include=F}
+recomendar <- function(n, matriz){
+  #plot(rules,method="graph",interactive=TRUE,shading=NA)
+  #plot(rules, measure=c("support","lift"), shading="confidence");
+  #plot(rules, shading="order", control=list(main ="Two-key plot"));
+ 
+
+  rules <- apriori(matriz,parameter = list(support = 0.1, confidence = 0.0))
+  
+  reglas <- subset(rules, subset = lhs %ain% n )
+
+  len <- length(reglas)
+  div <- 0.1
+  cont <- 0
+  #En el caso que no se generaron reglas con ese soporte, voy disminuyendo el soporte
+  while (len == 0){
+    div <- div /10
+    rules <- apriori(matriz,parameter = list(support = div, confidence = 0.0))
+    reglas <- subset(rules, subset = lhs %ain% n )
+    len <- length(reglas)
+    cont <- cont + 1
+    #Un criterio de parada ya que puede ser infinito
+    if (cont == 7){
+      break()
+    }
+  }
+  if (length(reglas)==0){
+    trendigtop<-inspect(rules@rhs)
+    return(row.names(sort(table(trendigtop),decreasing=TRUE))[1])
+  }else{
+ 
+  confianzaAlta <-sort(reglas, decreasing = TRUE, 
+                       na.last = NA,by = "confidence",
+                       order = FALSE)
+
+  #Obtengo la confianza maxima para luego tomar todos los articulos que posean esa confianza
+  maxConfianza <- max(quality((confianzaAlta))[2])
+  #Posiciones que poseen la misma confianza.
+  confianzaAlta<- subset(confianzaAlta, subset = confidence == maxConfianza)
+  
+  
+  #Ahora ordeno por soporte las que tienen la confianza mas alta
+  soportealto <- (sort(confianzaAlta, decreasing = TRUE, 
+                                 na.last = NA,by = "support",
+                                 order = FALSE)[1])
+  articulorecomendar <- inspect(soportealto@rhs[1])
+  return(articulorecomendar$items[1])
+  }
+}
+
+n <- c("deportes/articulo6","internacional/articulo9")
+articuloARecomendar <- recomendar(n, matriz)
+```
+```{r}
+print(paste("El artículo que se recomienda es:", articuloARecomendar))
+```
+
+# Cuarta parte
+Conocer las 10 visitas con mayor tiempo de estadía en la página y las 10 visitas con menor tiempo de estadía en la página.
+* Las 10 visitas con mayor tiempo de estadía en la página:
+```{r}
+timemayor10 <- periodicoSinBots[order(periodicoSinBots$tiempototal,decreasing = T),][1:10,c(1,7)]
+print("10 visitas con mayor tiempo de estadía en la página:")
+print(timemayor10)
+```
+* Las 10 visitas con menor tiempo de estadía en la página:
+```{r}
+timemenor10 <-  periodicoSinBots[order(periodicoSinBots$tiempototal,decreasing = F),][1:10,c(1,7)]
+print("10 visitas con menor tiempo de estadía en la página:")
+print(timemenor10)
+```
+
+
+# Quinta parte
+Conocer las 10 transacciones con mayor número de apariciones en el dataset.
+
+* Los 10 articulos con mayor numero de apariciones.
+```{r}
+top10 <- sort(itemFrequency(matriz, type = "absolute"),decreasing = T)[1:10]
+print("Los 10 articulos con mayor numero de apariciones son:")
+print(top10)
+itemFrequencyPlot(matriz,topN=10,type="absolute", main ="Los 10 articulos con mayor numero de apariciones.")
+
+```
+```{r}
+#TRANSACCIONES:
+```
+
+* Las 10 transacciones con mayor número de apariciones en el dataset.
+```{r}
+
+MatrizSinBots = split(periodicoSinBots$articles,periodicoSinBots$X)
+MatrizSinBots = as(MatrizSinBots,"transactions")
+top10transacciones <- sort(itemFrequency(MatrizSinBots, type = "absolute"),decreasing = T)[1:10]
+print("Las 10 transacciones con mayor numero de apariciones son:")
+print(top10transacciones)
+
+itemFrequencyPlot(MatrizSinBots,topN=10,type="absolute", main = "Las 10 transacciones con mayor numero de apariciones.")
+
+```
 

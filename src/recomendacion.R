@@ -14,11 +14,11 @@ install = function(pkg)
 #Instalo automaticamente los paquetes.
 install('arules')
 install('arulesViz')
-
+install('apcluster')
 #Cargo las librerias.
 library(arules)
 library(arulesViz)
-
+library(apcluster)
 ##-------------------------------LECTURA -----------------------------------
 
 ejemplo <- read.csv("data/ejemplo.csv")
@@ -79,7 +79,60 @@ genArticles <- function(articles){
 }
 #--------------END FUNCTION genArticles-----------------
 
-#LLENA LA MATRIZ DE TRANSACCIONES
+genArticles2 <- function(articles){
+  # Genera la columna articles utilizando la columna items.
+  #
+  # Args:
+  #   articles: Son arreglos númericos que representan los items (EJ: {item1,item9,item63} -> 1,9,63)
+  #
+  # Returns:
+  #   Retorna la columna articles.
+  articulo <- ""
+
+  for (i in 1:length(articles)) {
+    if (as.integer(articles[i]) <= 9 & as.integer(articles[i]) >= 1){
+      articulo <- paste(articulo, gsub(" ","",paste("deportes")))
+      
+    }
+    if (as.integer(articles[i]) <= 18 & as.integer(articles[i]) >= 10){
+      articulo <- paste(articulo, gsub(" ","",paste("politica")))
+      
+    }
+    if (as.integer(articles[i]) <= 27 & as.integer(articles[i]) >= 19){
+      articulo <- paste(articulo, gsub(" ","",paste("variedades")))
+      
+    }
+    if (as.integer(articles[i]) <= 36 & as.integer(articles[i]) >= 28){
+      articulo <- paste(articulo, gsub(" ","",paste("internacional")))
+      
+    }
+    if (as.integer(articles[i]) <= 45 & as.integer(articles[i]) >= 37){
+      articulo <- paste(articulo, gsub(" ","",paste("nacionales")))
+      
+    }
+    if (as.integer(articles[i]) <= 54 & as.integer(articles[i]) >= 46){
+      articulo <- paste(articulo, gsub(" ","",paste("sucesos")))
+      
+    }
+    if (as.integer(articles[i]) <= 63 & as.integer(articles[i]) >= 55){
+      articulo <- paste(articulo, gsub(" ","",paste("comunidad")))
+      
+    }
+    if (as.integer(articles[i]) <= 72 & as.integer(articles[i]) >= 64){
+      articulo <- paste(articulo, gsub(" ","",paste("negocios")))
+      
+    }
+    if (as.integer(articles[i]) <= 81 & as.integer(articles[i]) >= 73){
+      articulo <- paste(articulo, gsub(" ","",paste("opinion")))
+      
+    }
+  }
+  return(paste(unique(unlist(strsplit(articulo, " "))), sep="", collapse=", "))
+
+}
+
+#--------------END FUNCTION genArticles-----------------
+#LLENA LA MATRIZ DE TRANSACCIONES,
 #------------------FUNCTION llenar-----------------
 llenar <- function(periodico,fila){
   # Llena la matriz de transacciones con 1 en caso de que el usuario observo los articulos.
@@ -124,7 +177,6 @@ recomendar <- function(n, matriz){
   }
   if (length(reglas)==0){
     trendigtop<-inspect(rules@rhs)
-    
     return(row.names(sort(table(trendigtop),decreasing=TRUE))[1])
   }else{
  
@@ -143,7 +195,7 @@ recomendar <- function(n, matriz){
                                  na.last = NA,by = "support",
                                  order = FALSE)[1])
   articulorecomendar <- inspect(soportealto@rhs[1])
-  return(articulorecomendar)
+  return(articulorecomendar$items[1])
   }
 }
 
@@ -173,13 +225,18 @@ recomendar <- function(n, matriz){
 colnames(periodico)[5] <- "items"
 #Creo la columna de los articulos
 periodico$articles <- periodico$items
-
+periodico$individual <- periodico$items
 #Se sabe que el portal ofrece 9 tipos de contenidos 
 #y nos ofrecen solo información de 9 artículos.
 
 #Obtengo el numero de los articulos.
 periodico$articles <- strsplit(gsub("[{}item]","",periodico$articles), ",")
 
+periodico$individual<- strsplit(gsub("[{}item]","",periodico$individual), ",")
+periodico$individual <- lapply(periodico$individual, genArticles2)
+
+
+periodico$individual <- substring(periodico$individual, 2)
 #Modifico el dataset con las condiciones dadas.
 periodico$articles <- lapply(periodico$articles, genArticles)
 
@@ -197,7 +254,7 @@ periodico$tiempototal <- difftime(periodico$exit, periodico$entry, units =  "sec
 
 #GENERACION DE MATRIZ DE TRANSACCIONES Y DETECTAR USUARIOS ROBOTS
 
-#Generar la matriz de transacciones.
+#Generar la matriz de transacciones para recomendar articulos.
 #fila es un row inicializado en 0.
 fila <- matrix(data = 0, nrow = 1, ncol = 81)
 
@@ -221,20 +278,65 @@ periodico$numItems <- rowSums(matriz)
 numerobots <- periodico[periodico$numItems >= periodico$tiempototal/20,]
 print(paste("El numero de transacciones bot es:",nrow(numerobots)))  
 
-
 periodicoSinBots <- periodico[-numerobots$X,]
 #Utilizamos la matriz de transacciones sin las transacciones bots.
 matriz <- matriz[-numerobots$X,]
-#Matriz de transacciones
-matriz <- as(matriz, "transactions")
 
 
 
+##-------------------------------PARTE 2------------------------------------
+#2. Conocer los tipos de usuarios que ingresan a su página (ellos creen que 
+#son 8 tipos de usuarios) y tratar de determinar la proporción de cada tipo de usuario.
+
+#GENERACION DE MATRIZ DE TRANSACCIONES 
+
+#Matriz de transacciones para detectar grupos
+#matrix2 <- matrix(data = 0, nrow = nrow(matriz), ncol = 9)
+
+  #matrix2[,1] <- rowSums(matriz[,1:9])
+#matrix2[,2] <- rowSums(matriz[,10:18])
+#matrix2[,3] <- rowSums(matriz[,19:27])
+#matrix2[,4] <- rowSums(matriz[,28:36])
+# matrix2[,5] <- rowSums(matriz[,37:45])
+#matrix2[,6] <- rowSums(matriz[,46:54])
+# matrix2[,7] <- rowSums(matriz[,55:63])
+# matrix2[,8] <- rowSums(matriz[,64:72])
+# matrix2[,9] <- rowSums(matriz[,73:81])
+ 
+#  matrix2[,1] <- apply(matriz[,1:9],1,max)
+# matrix2[,2] <- apply(matriz[,10:18],1,max)
+# matrix2[,3] <- apply(matriz[,19:27],1,max)
+# matrix2[,4] <- apply(matriz[,28:36],1,max)
+#  matrix2[,5] <- apply(matriz[,37:45],1,max)
+#  matrix2[,6] <- apply(matriz[,46:54],1,max)
+#  matrix2[,7] <- apply(matriz[,55:63],1,max)
+# matrix2[,8] <- apply(matriz[,64:72],1,max)
+# matrix2[,9] <- apply(matriz[,73:81],1,max) 
+  
+#colnames(matrix2) <- c("deportes","politica","variedades","internacional","nacionales", "sucesos","comunidad","negocios","opinion")
 
 
+rules <- apriori(matriz,parameter = list(support = 0.000008019181883, confidence = 1.0))
+
+plot(rules, method = "grouped", control = list(k = 8))
+
+#ruledf = data.frame(
+#  lhs = labels(lhs(rules)),
+# rhs = labels(rhs(rules)))
+
+
+kmedias <- kmeans(matriz, 8,algorithm = "Hartigan-Wong")
+periodicoSinBots$cluster <- kmedias$cluster
+
+
+#Calculamos la matriz de similaridad utilizando el inverso del error cuadrado (distancia euclidea).
+sim <- crossprod(matriz)
+sim <- sim / sqrt(sim)
+#Corremos la affinity propagation
+clust_ap <- apcluster(sim) 
+show(clust_ap)
+##-------------------------------FIN PARTE 2------------------------------------
 ##-------------------------------PARTE 3------------------------------------
-
-
 #3. Dado un usuario nuevo que haya ingresado a n artículos (n variable), 
 #poder recomendar un artículo n+1 y así aumentar el compromiso del cliente 
 #con su portal web. Como usted sabe, para poder calcular las reglas necesita 
@@ -242,11 +344,15 @@ matriz <- as(matriz, "transactions")
 #son estos valores en consecuencia es tarea de usted determinar y justi???car los 
 #mismos de acuerdo a su criterio
 
-print("Introduzca los n articulos:")
-#n <- c("deportes/articulo1","internacional/articulo1", "comunidad/articulo1")
-n <- c("deportes/articulo6","deportes/articulo9")
-articuloARecomendar <- recomendar(n, matriz)
+#Matriz de transacciones
+matriz <- as(matriz, "transactions")
 
+print("Introduzca los n articulos:")
+n <- c("deportes/articulo1","internacional/articulo1", "comunidad/articulo1")
+n <- c("deportes/articulo6","deportes/articulo9")
+n <- c("deportes/articulo6","internacional/articulo9")
+articuloARecomendar <- recomendar(n, matriz)
+print(paste("El artículo que se recomienda es:", articuloARecomendar))
 
 ##-------------------------------FIN PARTE 3--------------------------------
 
